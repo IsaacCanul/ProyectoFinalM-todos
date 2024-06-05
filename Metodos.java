@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
 
+
 public class Metodos {
 
    public static int contarCifrasSignificativas(double numero) {
@@ -106,6 +107,8 @@ public class Metodos {
       numero = numero / Math.pow(10, decimales);
       return numero;
    }
+   //Erro absoluto
+
 
    // Bisección
 
@@ -301,7 +304,125 @@ public class Metodos {
       return matriz; // Retorno de la matriz ordenada
    }
 
+   //Diferenciación numérica
+   
+    // Método para calcular la derivada usando diferencias finitas hacia adelante
+    public static double derivadaDiferenciasFinitas(Funcion7 funcion, double x, double h) {
+      return (funcion.evaluar(x + h) - funcion.evaluar(x)) / h;
+  }
 
+  // Método para calcular la derivada usando diferencias finitas centradas
+  public static double derivadaDiferenciasCentradas(Funcion7 funcion, double x, double h) {
+      return (funcion.evaluar(x + h) - funcion.evaluar(x - h)) / (2 * h);
+  }
+  private static Funcion7 createFunctionFromInput(String input) {
+   // Remover espacios en blanco
+   String sanitizedInput = input.replaceAll("\\s+", "");
+
+   // Retornar una lambda que evalúa la expresión para un valor dado de x
+   return (double x) -> {
+       String expression = sanitizedInput.replaceAll("x", Double.toString(x));
+       return eval(expression);
+   };
+}
+
+// Método para evaluar expresiones matemáticas simples
+private static double eval(final String str) {
+   return new Object() {
+       int pos = -1, ch;
+
+       void nextChar() {
+           ch = (++pos < str.length()) ? str.charAt(pos) : -1;
+       }
+
+       boolean eat(int charToEat) {
+           while (ch == ' ') nextChar();
+           if (ch == charToEat) {
+               nextChar();
+               return true;
+           }
+           return false;
+       }
+
+       double parse() {
+           nextChar();
+           double x = parseExpression();
+           if (pos < str.length()) throw new RuntimeException("Unexpected: " + (char)ch);
+           return x;
+       }
+
+       // Gramatica:
+       // expression = term | expression `+` term | expression `-` term
+       // term = factor | term `*` factor | term `/` factor
+       // factor = `+` factor | `-` factor | `(` expression `)` | number
+       //        | functionName `(` expression `)` | factor `^` factor
+
+       double parseExpression() {
+           double x = parseTerm();
+           for (;;) {
+               if (eat('+')) x += parseTerm(); // suma
+               else if (eat('-')) x -= parseTerm(); // resta
+               else return x;
+           }
+       }
+
+       double parseTerm() {
+           double x = parseFactor();
+           for (;;) {
+               if (eat('*')) x *= parseFactor(); // multiplicacion
+               else if (eat('/')) x /= parseFactor(); // division
+               else return x;
+           }
+       }
+
+       double parseFactor() {
+           if (eat('+')) return parseFactor(); // + unario
+           if (eat('-')) return -parseFactor(); // - unario
+
+           double x;
+           int startPos = this.pos;
+           if (eat('(')) { // parentesis
+               x = parseExpression();
+               eat(')');
+           } else if ((ch >= '0' && ch <= '9') || ch == '.') { // numeros
+               while ((ch >= '0' && ch <= '9') || ch == '.') nextChar();
+               x = Double.parseDouble(str.substring(startPos, this.pos));
+           } else if (ch >= 'a' && ch <= 'z') { // funciones
+               while (ch >= 'a' && ch <= 'z') nextChar();
+               String func = str.substring(startPos, this.pos);
+               x = parseFactor();
+               if (func.equals("sqrt")) x = Math.sqrt(x);
+               else if (func.equals("sin")) x = Math.sin(Math.toRadians(x));
+               else if (func.equals("cos")) x = Math.cos(Math.toRadians(x));
+               else if (func.equals("tan")) x = Math.tan(Math.toRadians(x));
+               else throw new RuntimeException("Unknown function: " + func);
+           } else {
+               throw new RuntimeException("Unexpected: " + (char)ch);
+           }
+
+           if (eat('^')) x = Math.pow(x, parseFactor()); // exponente
+
+           return x;
+       }
+   }.parse();
+}
+
+private static double getInputDouble(Scanner scanner, String prompt) {
+   double result = 0;
+   boolean validInput = false;
+   while (!validInput) {
+       System.out.print(prompt);
+       if (scanner.hasNextDouble()) {
+           result = scanner.nextDouble();
+           validInput = true;
+       } else {
+           System.out.println("Entrada inválida. Por favor, ingrese un número válido.");
+           scanner.next(); // Limpiar entrada no válida
+       }
+   }
+   return result;
+}
+   
    //metodo de biseccion 
 
    //metodo de gauss seidel
@@ -765,6 +886,16 @@ public static double calcularDerivada(double x, double y) {
 
                      case 5:
                         System.out.println("Error absoluto");
+                        System.out.print("Ingrese el valor exacto: ");
+                        double valorExacto1 = scanner.nextInt();
+
+                        System.out.print("Ingrese el valor aproximado: ");
+                        double valorAproximado1 = scanner.nextDouble();
+
+                        double errorAbsoluto1 = errorAbs(valorExacto1, valorAproximado1);
+                        System.out.println("El error absoluto: "+errorAbsoluto1);
+
+                        
 
                         break;
                      case 6:
@@ -1027,6 +1158,30 @@ public static double calcularDerivada(double x, double y) {
                   switch (opc) {
                      case 1:
                      System.out.println("Diferenciación numérica");
+                     
+        // Pedir al usuario que ingrese una función
+                     System.out.print("Ingrese una función de x (por ejemplo, x^2 + 3*x + 2): ");
+                     String input = scanner.next();
+
+                     // Crear una función lambda a partir del input del usuario
+                     Funcion7 funcion = createFunctionFromInput(input);
+
+                     // Pedir al usuario que ingrese el punto en el que quiere evaluar la derivada
+                     double x = getInputDouble(scanner, "Ingrese el valor de x en el que quiere evaluar la derivada: ");
+
+                     // Pedir al usuario que ingrese el valor de h
+                     double h = getInputDouble(scanner, "Ingrese un valor pequeño para h: ");
+
+                     // Calcular la derivada usando diferencias finitas hacia adelante
+                     double derivadaAdelante = derivadaDiferenciasFinitas(funcion, x, h);
+                     System.out.println("Derivada usando diferencias finitas hacia adelante: " + derivadaAdelante);
+
+                     // Calcular la derivada usando diferencias finitas centradas
+                     double derivadaCentrada = derivadaDiferenciasCentradas(funcion, x, h);
+                     System.out.println("Derivada usando diferencias finitas centradas: " + derivadaCentrada);
+
+               
+
 
                         break;
 
@@ -1043,10 +1198,10 @@ public static double calcularDerivada(double x, double y) {
                      int n = scanner.nextInt();
 
                      // Definimos la función f(x) = e^(x^2)
-                     Function<Double, Double> funcion = x -> Math.exp(x * x);
+                     Function<Double, Double> funciont = xt -> Math.exp(xt * xt);
 
                      // Calculamos la aproximación de la integral usando la regla del trapecio
-                     double resultado = reglaTrapecio(funcion, a, b, n);
+                     double resultado = reglaTrapecio(funciont, a, b, n);
 
                      // Tomamos el valor absoluto del resultado para asegurarnos de que sea positivo
                      double resultadoPositivo = Math.abs(resultado);
